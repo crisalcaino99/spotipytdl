@@ -1,0 +1,32 @@
+classDiagram
+  class Database {
+    db_path : str
+    create_tables()
+    get_all_playlist_snapshots() dict
+    get_all_unique_tracks()
+    get_playlist_tracks(playlist_id: str)
+    get_track(track_id: str)
+    link_track_to_playlist(playlist_id: str, track_id: str, position: int)
+    mark_as_downloaded(track_id: str, file_path: str)
+    save_playlist(playlist: Playlist)
+    save_track(track: Track)
+  }
+  class Playlist {
+    id : str
+    name : str
+    owner : str
+    snapshot_id : str
+    total_tracks : int
+    tracks : list
+    add_track(track: Track)
+    from_spotify_response(spotify_data: dict)
+    to_dict()
+  }
+  class Track {
+    album : str
+    artists
+    id : str
+    name : str
+    from_spotify_response(spotify_data: dict)
+    to_dict()
+  }
