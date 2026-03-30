@@ -17,6 +17,7 @@ def scrape_covers(test_int: int) -> None:
     covers_dir.mkdir(exist_ok=True)
 
     # TODO: usar with aqui
+    # TODO: Mover la funcion para que sea en base a una playlist especifica
     conn = sqlite3.connect('music.db')
     cursor = conn.cursor()
 

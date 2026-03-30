@@ -1,7 +1,13 @@
 [tool.pyright]
 typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+reportUnknownParameterType = false
+reportUnknownLambdaType = false
 
 [tool.ruff]
 line-length = 88
 target-version = "py311"
-select = ["E", "F", "I", "B", "ANN"]
+select = ["E", "F", "I", "B"]

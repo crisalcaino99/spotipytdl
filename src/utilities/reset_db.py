@@ -1,9 +1,11 @@
 import os
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent))
 
 from database.db_manager import Database
+
 
 def reset_database() -> None:
     # TODO: escribir el .env
@@ -13,7 +15,7 @@ def reset_database() -> None:
         os.remove(db_path)
         print(f" Base de datos eliminada {db_path}")
     
-    db = Database()
+    Database()
     print('Base de datos creada con nuevo esquema')
 
 # test

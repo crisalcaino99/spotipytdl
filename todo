@@ -1,10 +1,19 @@
 Weas por hacer
 
-> GUI o CLI dependiendo
-> visualizacion de playlists
-    Dentro del CLI introducir un highlight
-
-
+> Corregir el nombre de descarga y revisar esa wea
+> Investigar como sincronizar hacia una playlist
+> Revisar si le estoy poniendo bien la meta data
 > extraccion de metadata
-> revisar que la BBDD haya quedado bien
-> Anadir logger para debugging
+
+
+> visualizacion de playlists
+    Ver tracks descargados
+    
+> Que tenga la opcion de descargar playlists
+    Ver playlists descargadas
+    Ver playlists sincronizadas
+
+
+> Creacion y sincronizacion de playlists
+
+> Increible pero funciona

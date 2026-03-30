@@ -1,13 +1,8 @@
 import sqlite3
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
-import os
 
-def check_column_exists(cursor, table: str, column: str) -> bool:
-    cursor.execute(f"PRAGMA table_info({table})")
-    columns = [col[1] for col in cursor.fetchall()]
-    return column in columns
+sys.path.insert(0, str(Path(__file__).parent))
 
 
 def add_file_path_column():
@@ -39,6 +34,12 @@ def migrate_add_snapshot_column():
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     print('Aplicando migraciones')
+
+    def check_column_exists(cursor: sqlite3.Cursor, table: str, column: str) -> bool:
+        cursor.execute(f"PRAGMA table_info({table})")
+        columns = [col[1] for col in cursor.fetchall()]
+
+        return (column in columns)
 
     try:
         if not check_column_exists(cursor, 'playlists', 'snapshot_id'):

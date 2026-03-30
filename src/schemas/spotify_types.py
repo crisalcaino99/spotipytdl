@@ -1,4 +1,4 @@
-from typing import TypedDict  # noqa: I001
+from typing import TypedDict # noqa: I001
 
 class AlbumSummary(TypedDict):
     id: str
@@ -27,7 +27,17 @@ class TrackData(TypedDict):
     name: str
     artists: list[str]
     album: AlbumData
+
+class TrackDict(TypedDict):
+    """Estructura auxiliar"""
+    id: str
+    name: str
+    artists: list[str]
+    album: str 
+    downloaded: bool
+    file_path: str | None
     
+
 class PlaylistData(TypedDict):
     """Playlist data from Spotify API"""
     id: str
@@ -36,14 +46,30 @@ class PlaylistData(TypedDict):
     total_tracks: int
     snapshot_id: str
 
-class TrackDict(TypedDict):
-    """Estructura auxiliar"""
+class PlaylistTrackDict(TypedDict):
     id: str
     name: str
-    artists: str
+    artists: list[str]
     album: str
     downloaded: bool
-    file_path: str
+    file_path: str | None
+    position: int
+
+class SpotifyArtist(TypedDict):
+    name: str
+
+class SpotifyAlbum(TypedDict):
+    id: str
+
+class SpotifyTrackResponse(TypedDict):
+    """"id: str
+    name: str
+    artists: list[SpotifyArtist]
+    album: SpotifyAlbum"""
+    id: str
+    name: str
+    artists: list[SpotifyArtist]
+    album: SpotifyAlbum
 
 class SpotifyOwner(TypedDict):
     display_name: str

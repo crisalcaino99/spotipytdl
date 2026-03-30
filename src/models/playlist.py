@@ -4,32 +4,30 @@ from schemas.spotify_types import SpotifyPlaylistResponse
 
 class Playlist:
     """Representacion de una playlist de Spotify"""
-
     def __init__(self, id: str, name: str, owner: str,
-                total_tracks: int, snapshot_id: str = '') -> None:
+                total_tracks: int, snapshot_id: str = '',
+                last_synced_at: str|None = None) -> None:
         self.id = id
         self.name = name
         self.owner = owner
         self.total_tracks = total_tracks
-        self.tracks: list[Track] = []
         self.snapshot_id = snapshot_id
+        self.last_synced_at = last_synced_at
     
     def __repr__(self) -> str:
         """Representacion en String del Objeto"""
         return f"Playlist {self.name}"
         
+    # add track method deleted
 
-    def add_track(self, track: Track) -> None:
-        self.tracks.append(track)
-        return None
-    
     def to_dict(self) -> dict[str, str | int]:
         """Pasar el objeto a diccionario"""
         return {
             'id': self.id,
             'name': self.name,
             'owner': self.owner,
-            'total_tracks': self.total_tracks
+            'total_tracks': self.total_tracks,
+            'snapshot_id': self.snapshot_id,
         }
     
     from typing import Self
@@ -60,10 +58,4 @@ if __name__ == '__main__':
     track1 = Track('1', 'Bohemian Rhapsody',['Queen'])
     track2 = Track('2','Stairway to Heaven',  ['Led Zeppelin'])
 
-    playlist.add_track(track1)
-    playlist.add_track(track2)
-
-    print(f"Tracks agregados: {len(playlist.tracks)}")
-
-    for track in playlist.tracks:
-        print(f" - {track}")
+    
