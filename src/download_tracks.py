@@ -48,6 +48,8 @@ def download_all_tracks(max_downloads: None|int):
     print(f"Fallidos {failed}")
 
 # some test lol
+# TODO: FIX THIS ASAP
+# this one is sooooo wrong
 def download_single_track(track: TrackDict) -> str | None:
     db = Database('music.db')
     artists = track['artists']
@@ -63,6 +65,7 @@ def download_single_track(track: TrackDict) -> str | None:
     
     return file_path
 
+#TODO: FIX THIS THING
 def download_pending_tracks_from_playlist(playlist_id: str) -> dict[str, int]:
     db = Database('music.db')
     tracks = db.get_playlist_tracks(playlist_id)
