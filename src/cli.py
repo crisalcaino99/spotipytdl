@@ -78,7 +78,8 @@ def export_playlist_interactive(
         return
     
     export_root = Path('exports') / playlist_name
-
+    
+    # TODO: fix in here
     try:
         playlist_path = export_playlist_bundle(
             playlist_name = playlist_name, 
@@ -121,7 +122,7 @@ def show_playlist_tracks(playlist: dict[str, Any]) -> None:
     from src.services.sync_service import get_playlist_status
 
     # testing in progress
-    db = Database('src/music.db')
+    db = Database('music.db')
     
     while True:
         console.clear()

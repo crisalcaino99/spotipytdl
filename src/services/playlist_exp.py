@@ -50,9 +50,13 @@ def export_playlist_bundle(
         tracks/
     """
     
-    bundle_dir = export_root 
+    # TODO: fix this line
+    
+    bundle_dir = Path(str(export_root).strip())
     playlists_dir = bundle_dir / "playlists"
     tracks_dir = bundle_dir / "tracks"
+
+    # bug in here: TODO: Fix it.
 
     playlists_dir.mkdir(parents = True, exist_ok=True)
     tracks_dir.mkdir(parents=True, exist_ok=True)

@@ -47,7 +47,7 @@ class Downloader:
                     "preferredquality": "192",
                 }
             ],
-            "outtmpl": str(self.download_dir / "f{safe_name}.%(ext)s"),
+            "outtmpl": str(self.download_dir / f"{safe_name}.%(ext)s"),
             "quiet": True,
             "no_warnings": True,
             "progress_hooks": [progress_hook],
