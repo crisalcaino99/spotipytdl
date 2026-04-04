@@ -2,3 +2,8 @@
 /covers/
 /exports/
 **/*.mp3
+.env
+*.env
+.cache/
+.cache/*
+**/.cache/
