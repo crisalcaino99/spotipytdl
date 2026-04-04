@@ -1,8 +1,14 @@
 Weas por hacer
 
 > Corregir el nombre de descarga y revisar esa wea
+> Crear boton de hard reset
+ -- ese boton tiene que Borrar la base de datos
+ -- borrar la carpeta de downloads 
+ -- borrar la carpeta de covers 
+ -- borrar la carpeta de exports 
+
 > Investigar como sincronizar hacia una playlist
-> Revisar si le estoy poniendo bien la meta data
+> Revisar si le estoy poniendo bien la meta data y los cover arts
 > extraccion de metadata
 
 
@@ -17,5 +23,6 @@ Weas por hacer
 
 
 > Creacion y sincronizacion de playlists
+
 
 > Increible pero funciona
