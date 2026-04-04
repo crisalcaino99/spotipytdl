@@ -1,16 +1,13 @@
 Weas por hacer
 
 > Corregir el nombre de descarga y revisar esa wea
+    -- Ensure metadata and cover setup right away when downloading
+
 > Crear boton de hard reset
  -- ese boton tiene que Borrar la base de datos
  -- borrar la carpeta de downloads 
  -- borrar la carpeta de covers 
  -- borrar la carpeta de exports 
-
-> Investigar como sincronizar hacia una playlist
-> Revisar si le estoy poniendo bien la meta data y los cover arts
-> extraccion de metadata
-
 
 > visualizacion de playlists
     Ver tracks descargados
@@ -20,9 +17,3 @@ Weas por hacer
 > Que tenga la opcion de descargar playlists
     Ver playlists descargadas
     Ver playlists sincronizadas
-
-
-> Creacion y sincronizacion de playlists
-
-
-> Increible pero funciona
