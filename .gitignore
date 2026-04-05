@@ -8,3 +8,8 @@
 .cache/*
 **/.cache/
 .cache
+*/.db
+**/*.db
+.db
+.db-journal
+.db.backup

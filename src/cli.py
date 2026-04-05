@@ -41,6 +41,7 @@ def show_menu() -> None:
     table.add_row("4", "show something")
     table.add_row("5", "quit")
     table.add_row("6", "see playlists")
+    table.add_row('7', 'hard reset!')
 
     console.print(table)
     console.print("\n")
@@ -106,6 +107,49 @@ def export_playlist_interactive(
         )
     )
     console.input("\n[dim]Press Enter to continue...[/dim]")
+
+def option_hard_reset() -> None:
+    from src.services.hard_reset import hardcore_reset
+    # Ask for confirmation
+
+    console.print(
+        "\n[bold red] HARD RESET [/bold red]\n"
+        "Esto se eliminara:\n"
+        "- Base de datos:\n"
+        "- Downloads:\n"
+        "- Exports:\n"
+        "- Covers\n"
+    )
+
+    answer = console.input(
+        '[bold yellow] you sure my wigga? (type yes para confirmar:)[/bold yellow]'
+    ).strip()
+
+    if answer.lower() != 'yes':
+        console.print('[green] Cancelado [/green]')
+        return
+    
+    ROOT = Path(__file__).resolve().parent.parent
+
+    try:
+        console.print('deleting...')
+        console.print(ROOT / 'music.db')
+        console.print(ROOT/ 'downloads')
+        console.print(ROOT/ 'exports')
+        console.print(ROOT/ 'covers')
+        
+        hardcore_reset(
+            db_path = ROOT / 'music.db',
+            downloads_dir = ROOT/ 'downloads',
+            exports_dir = ROOT/ 'exports',
+            covers_dir = ROOT/ 'covers',
+        )
+    
+    except Exception as e:
+        console.print(f'[red] Error durante reset: [/red] {e}')
+        return
+    
+    console.print('\n[bold green] Reset completado. [/bold green]')
 
 
 def show_playlist_tracks(playlist: dict[str, Any]) -> None: 
@@ -414,7 +458,10 @@ def main() -> None:
             
         elif choice == '6':
             option_browse_playlists_interactive()
-            
+        
+        elif choice == '7':
+            option_hard_reset()
+
         else:
             console.print("Not yet!")
             console.input("\n Press Enter...")
