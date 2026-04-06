@@ -6,6 +6,8 @@ from time import sleep
 
 import requests
 
+from database.db_manager import Database
+
 
 def download_cover_bytes(url: str, timeout: int = 10) -> bytes:
     response = requests.get(url, timeout = timeout)
@@ -17,6 +19,51 @@ def save_cover_image(image_bytes:bytes, cover_path: Path) -> None:
     cover_path.parent.mkdir(parents=True, exist_ok=True)
     cover_path.write_bytes(image_bytes)
 
+def ensure_album_cover(
+    db: Database, 
+    album_id: str, 
+    covers_dir: Path,
+) -> Path | None:
+    """Verifica que el album (tabla) tenga el cover. Si no, lo descarga"""
+
+    covers_dir.mkdir(parents=True, exist_ok = True)
+
+    with sqlite3.connect(db.db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT id, cover_url, cover_path
+            FROM albums
+            WHERE id = ?
+            """,
+            (album_id,),
+        )
+        row = cursor.fetchone()
+
+        if row is None:
+            return None
+    
+        db_album_id, cover_url, cover_path_str = row
+
+        # Revisa si existe el cover descargado
+        # Si existe entonces termina
+        if cover_path_str:
+            existing_cover_path = Path(cover_path_str)
+            if existing_cover_path.exists():
+                return existing_cover_path
+
+        if not cover_url:
+            return None
+
+        response = requests.get(cover_url, timeout = 10)
+        response.raise_for_status()
+
+        cover_path = covers_dir / f"{db_album_id}.jpg"
+        cover_path.write_bytes(response.content)
+
+        update_album_cover_path(conn, db_album_id, cover_path)
+        return cover_path
+    
 def fetch_albums_missing_covers(conn: sqlite3.Connection,
                                 limit: int | None = None) -> list[tuple[str, str, str, str]]:  # noqa: E501
     

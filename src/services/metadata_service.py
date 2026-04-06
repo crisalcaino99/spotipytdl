@@ -71,13 +71,16 @@ def embed_metadata_for_track(
         return False
     
 
+# Maybe I should do this as well for a playlist
+# How am I gonna design this in export...
+
 def embed_metadata_for_album_tracks(
     album: AlbumData,
     tracks: list[TrackDict],
     covers_dir: Path) -> tuple[int, int]:
     
     """Embebe metadata para todos los tracks descargados de un album
-    Devuelve: (success_count, failed_count)"""
+    Devuelve: (success_count, failed_count). Pone el cover si es necesario"""
 
     cover_path = ensure_album_cover_downloaded(album, covers_dir)
     success = 0
