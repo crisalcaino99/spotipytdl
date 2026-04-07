@@ -8,10 +8,13 @@ from schemas.spotify_types import AlbumData, TrackDict
 from services.cover_service import ensure_album_cover_downloaded
 
 
+# Bingo: Include this into the CLI or pipeline of export and voila!
 def embed_metadata_for_track(
         track: TrackDict,
-        album: AlbumData,
-        cover_path: Path | None = None) -> bool:
+        cover_path: Path | None ) -> bool:
+    
+    # TODO: I should probably create a test for this lol
+
     """Embebe metadata basica en un mp3
     
     Escribe
@@ -43,18 +46,19 @@ def embed_metadata_for_track(
 
         title = track["name"]
         artists = ", ".join(track["artists"])
-        album_name = album["name"]
+        album_name = track["album"]
 
         tags.add(TIT2(encoding=3, text=title))
         tags.add(TIT2(encoding=3, text=artists))
         tags.add(TIT2(encoding=3, text=album_name))
         
         if cover_path is not None and cover_path.exists():
+            
             image_bytes = cover_path.read_bytes()
             tags.add(
                 APIC(
-                    encoding = 3,
-                    mime = "image/jpeg",
+                    encoding = 0,
+                    mime = "image/jpg",
                     type = 3,
                     desc = 'Cover',
                     data = image_bytes
@@ -95,7 +99,6 @@ def embed_metadata_for_album_tracks(
 
         ok = embed_metadata_for_track(
             track=track, 
-            album=album,
             cover_path=cover_path
         )
 

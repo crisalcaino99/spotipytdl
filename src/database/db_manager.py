@@ -206,6 +206,7 @@ class Database:
         return None
     
     # where we at now
+    # TODO: Modify PlaylistTrackDict
     def get_playlist_tracks(self, playlist_id: str) -> list[PlaylistTrackDict]:
         """Obtiene todos los tracks de una playlist (buscada por id) 
         ordenados por posicion
@@ -220,6 +221,7 @@ class Database:
                     tracks.name, 
                     tracks.artists, 
                     albums.name, 
+                    albums.id,
                     tracks.downloaded,
                     tracks.file_path, 
                     playlist_tracks.position
@@ -242,9 +244,10 @@ class Database:
                     'name': row[1],
                     'artists': artists,
                     'album': row[3] if row[3] else "Unknown", 
-                    'downloaded': bool(row[4]),
-                    'file_path': row[5],
-                    'position': row[6]
+                    'album_id': row[4],
+                    'downloaded': bool(row[5]),
+                    'file_path': row[6],
+                    'position': row[7]
                 }
                 tracks.append(td)
 

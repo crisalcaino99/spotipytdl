@@ -88,6 +88,7 @@ def export_playlist_bundle(
             'name': track['name'],
             'artists': track['artists'],
             'album': track['album'],
+            'album_id': track['album_id'],
             'downloaded': track['downloaded'],
             'file_path': str(Path("..") / 'tracks'/ destination_path.name),
             'position': track['position']

@@ -19,12 +19,14 @@ def save_cover_image(image_bytes:bytes, cover_path: Path) -> None:
     cover_path.parent.mkdir(parents=True, exist_ok=True)
     cover_path.write_bytes(image_bytes)
 
+# Add this thing in CLI
 def ensure_album_cover(
     db: Database, 
     album_id: str, 
     covers_dir: Path,
 ) -> Path | None:
-    """Verifica que el album (tabla) tenga el cover. Si no, lo descarga"""
+    """Verifica que el album (tabla) tenga el cover. Si no, lo descarga
+    Retorna el Path del cover"""
 
     covers_dir.mkdir(parents=True, exist_ok = True)
 

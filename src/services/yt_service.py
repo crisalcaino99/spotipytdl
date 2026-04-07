@@ -20,6 +20,8 @@ class Downloader:
         self.ffmpeg_location = ffmpeg_location
     
     def search_and_download(self, track_name: str, artist: str) -> str | None :
+        """Allegedly searches and puts a sanitized name. Returns the str of the path.mp3
+        """
         downloaded_mp3: Path | None = None
 
         def progress_hook(d: dict[str, Any]) -> None:

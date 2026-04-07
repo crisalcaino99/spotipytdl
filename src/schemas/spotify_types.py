@@ -1,4 +1,4 @@
-from typing import TypedDict # noqa: I001
+from typing import Any, TypedDict # noqa: I001
 
 class AlbumSummary(TypedDict):
     id: str
@@ -34,6 +34,7 @@ class TrackDict(TypedDict):
     name: str
     artists: list[str]
     album: str 
+    album_id: str|Any
     downloaded: bool
     file_path: str | None
     
@@ -50,7 +51,8 @@ class PlaylistTrackDict(TypedDict):
     id: str
     name: str
     artists: list[str]
-    album: str
+    album: str 
+    album_id: str | Any
     downloaded: bool
     file_path: str | None
     position: int
