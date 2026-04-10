@@ -10,6 +10,9 @@
 .cache
 */.db
 **/*.db
+.jpg
+*/.jpg
+**/*.jpg
 .db
 .db-journal
 .db.backup

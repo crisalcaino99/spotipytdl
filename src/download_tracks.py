@@ -80,6 +80,7 @@ def download_single_track(track: TrackDict) -> str | None:
 
 #TODO: FIX THIS THING
 #TODO: Include the ensure cover thing
+
 def download_pending_tracks_from_playlist(playlist_id: str) -> dict[str, int]:
 
 
