@@ -283,6 +283,7 @@ class Database:
                     "name": row[1],
                     "artists": [artist.strip() for artist in row[2].split(",")],
                     "album": row[3] if row[3] else "Unknown",
+                    "album_id": row[3] if row[3] else "Unknown",
                     "downloaded": bool(row[4]),
                     "file_path": row[5]
                 })
@@ -338,6 +339,7 @@ class Database:
                     'name': row[1],
                     'artists': row[2],
                     # TODO: Corregir esto eventualmente
+                    'album_id': row[3],
                     'album': row[3],
                     'downloaded': row[4],
                     'file_path': row[5]
@@ -553,9 +555,8 @@ class Database:
                 'last_synced_at': row[5]
             }
 
-    # TODO: def clear playlist tracks
+# TODO: def clear playlist tracks
 #########################################################################
-
 # AI SLOP for testing
 if __name__ == '__main__':
     db = Database()
