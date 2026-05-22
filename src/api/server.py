@@ -1,12 +1,16 @@
+import io
 import os
+import queue
 import sys
+import threading
+from contextlib import redirect_stdout, redirect_stderr
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from database.db_manager import Database
@@ -17,6 +21,43 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Project root = two levels up from this file (src/api/server.py → project root)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+# ── Background job state ──────────────────────────────────────────────────────
+
+_job_lock = threading.Lock()
+_job_state: dict = {"status": "idle", "type": None, "logs": []}
+_log_queue: queue.Queue = queue.Queue()
+
+
+class _QueueWriter(io.TextIOBase):
+    """Redirects print() output into the log queue during a job."""
+    def write(self, s: str) -> int:
+        if s and s != "\n":
+            _log_queue.put(s.rstrip())
+        return len(s)
+    def flush(self): pass
+
+
+def _run_job(job_type: str, fn):
+    with _job_lock:
+        _job_state["status"] = "running"
+        _job_state["type"] = job_type
+        _job_state["logs"] = []
+    _log_queue.put(f"[{job_type}] starting…")
+    writer = _QueueWriter()
+    try:
+        with redirect_stdout(writer), redirect_stderr(writer):
+            fn()
+        _log_queue.put(f"[{job_type}] done ✓")
+        with _job_lock:
+            _job_state["status"] = "done"
+    except Exception as exc:
+        _log_queue.put(f"[{job_type}] error: {exc}")
+        with _job_lock:
+            _job_state["status"] = "error"
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,11 +65,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_db_path = os.environ.get("DB_PATH", "music.db")
+_db_path = os.environ.get("DB_PATH") or str(_PROJECT_ROOT / "music.db")
 db = Database(_db_path)
 
-_downloads_dir = Path(os.environ.get("DOWNLOADS_DIR", "downloads")).resolve()
-_covers_dir = Path(os.environ.get("COVERS_DIR", "covers")).resolve()
+_downloads_dir = Path(os.environ.get("DOWNLOADS_DIR") or str(_PROJECT_ROOT / "downloads")).resolve()
+_covers_dir    = Path(os.environ.get("COVERS_DIR")    or str(_PROJECT_ROOT / "covers")).resolve()
 
 if _downloads_dir.exists():
     app.mount("/downloads", StaticFiles(directory=str(_downloads_dir)), name="downloads")
@@ -145,5 +186,76 @@ def _playlist_exists(playlist_id: str) -> bool:
             "SELECT 1 FROM playlists WHERE id = ?", (playlist_id,)
         ).fetchone()
     return row is not None
+
+
+# ── Jobs ──────────────────────────────────────────────────────────────────────
+
+@app.post("/api/sync")
+def trigger_sync():
+    """Start a background Spotify → DB sync. Returns 409 if already running."""
+    if _job_state["status"] == "running":
+        raise HTTPException(status_code=409, detail="A job is already running")
+
+    def _sync():
+        from controllers.app import sync_spotify_to_database
+        sync_spotify_to_database()
+
+    t = threading.Thread(target=_run_job, args=("sync", _sync), daemon=True)
+    t.start()
+    return {"status": "started"}
+
+
+@app.post("/api/download")
+def trigger_download():
+    """Start a background download of all pending tracks."""
+    if _job_state["status"] == "running":
+        raise HTTPException(status_code=409, detail="A job is already running")
+
+    def _download():
+        from download_tracks import download_all_tracks
+        download_all_tracks(max_downloads=None)
+
+    t = threading.Thread(target=_run_job, args=("download", _download), daemon=True)
+    t.start()
+    return {"status": "started"}
+
+
+@app.get("/api/jobs/status")
+def job_status():
+    return dict(_job_state)
+
+
+@app.get("/api/jobs/logs")
+def job_logs():
+    """SSE stream — sends log lines as they arrive, then keeps connection alive."""
+    def event_stream():
+        while True:
+            try:
+                line = _log_queue.get(timeout=30)
+                with _job_lock:
+                    _job_state["logs"].append(line)
+                yield f"data: {line}\n\n"
+            except queue.Empty:
+                # keepalive comment
+                yield ": ping\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache",
+                                      "X-Accel-Buffering": "no"})
+
+
+# ── UI ────────────────────────────────────────────────────────────────────────
+
+_static_dir = Path(__file__).parent / "static"
+_static_dir.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+
+
+@app.get("/", response_class=HTMLResponse)
+def serve_ui():
+    index = _static_dir / "index.html"
+    if not index.exists():
+        return HTMLResponse("<h1>UI not found</h1>", status_code=404)
+    return HTMLResponse(index.read_text())
 
 

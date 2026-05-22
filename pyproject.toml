@@ -1,3 +1,30 @@
+[tool.poetry]
+name = "spotipytdl"
+version = "0.1.0"
+description = "Sync Spotify playlists and stream them to your local network"
+authors = ["crisalcaino99"]
+readme = "README.md"
+packages = [{ include = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+spotipy = ">=2.23.0"
+yt-dlp = ">=2024.1.0"
+mutagen = ">=1.47.0"
+fastapi = ">=0.110.0"
+uvicorn = { version = ">=0.29.0", extras = ["standard"] }
+python-dotenv = ">=1.0.0"
+requests = ">=2.31.0"
+
+[tool.poetry.scripts]
+sync = "src.controllers.app:sync_spotify_to_database"
+download = "src.download_tracks:download_all_tracks"
+serve = "uvicorn:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.pyright]
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false

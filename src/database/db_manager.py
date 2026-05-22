@@ -14,7 +14,10 @@ from schemas.spotify_types import (AlbumData, TrackData,
 
 class Database:
     #TODO: Usar with en el codigo
-    def __init__(self, db_path: str = 'music.db') -> None:
+    def __init__(self, db_path: str | None = None) -> None:
+        if db_path is None:
+            # Always resolve relative to the project root, not CWD
+            db_path = str(Path(__file__).resolve().parent.parent.parent / "music.db")
         self.db_path = db_path
         self.create_tables()
 
@@ -82,10 +85,13 @@ class Database:
             """
             )
             
-            cursor.execute("""
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_position_unique
-                ON playlist_tracks (playlist_id, position)
-            """)
+            try:
+                cursor.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_position_unique
+                    ON playlist_tracks (playlist_id, position)
+                """)
+            except Exception:
+                pass  # Index may already exist with conflicting data; skip silently
 
             self._ensure_playlist_columns(cursor)
         return None
@@ -215,36 +221,45 @@ class Database:
         
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            # Support both old schema (tracks.album text) and new (tracks.album_id FK)
+            pragma = cursor.execute("PRAGMA table_info(tracks)").fetchall()
+            col_names = {c[1] for c in pragma}
+            if 'album_id' in col_names:
+                album_expr = "COALESCE(albums.name, tracks.album_id)"
+                join_clause = "LEFT JOIN albums ON tracks.album_id = albums.id"
+                album_id_expr = "albums.id"
+            else:
+                album_expr = "tracks.album"
+                join_clause = ""
+                album_id_expr = "NULL"
+
+            cursor.execute(f"""
                 SELECT
-                    tracks.id, 
-                    tracks.name, 
-                    tracks.artists, 
-                    albums.name, 
-                    albums.id,
+                    tracks.id,
+                    tracks.name,
+                    tracks.artists,
+                    {album_expr},
+                    {album_id_expr},
                     tracks.downloaded,
-                    tracks.file_path, 
+                    tracks.file_path,
                     playlist_tracks.position
                 FROM tracks
-                JOIN playlist_tracks
-                    ON tracks.id = playlist_tracks.track_id
-                LEFT JOIN albums
-                    ON tracks.album_id = albums.id
+                JOIN playlist_tracks ON tracks.id = playlist_tracks.track_id
+                {join_clause}
                 WHERE playlist_tracks.playlist_id = ?
                 ORDER BY playlist_tracks.position ASC
-            """, (playlist_id, ))
+            """, (playlist_id,))
 
             rows = cursor.fetchall()
             tracks: list[PlaylistTrackDict] = []
             for row in rows:
                 artists = [artist.strip() for artist in row[2].split(",")]
-
                 td: PlaylistTrackDict = {
-                    'id': row[0], 
+                    'id': row[0],
                     'name': row[1],
                     'artists': artists,
-                    'album': row[3] if row[3] else "Unknown", 
-                    'album_id': row[4],
+                    'album': row[3] if row[3] else "Unknown",
+                    'album_id': row[4] or '',
                     'downloaded': bool(row[5]),
                     'file_path': row[6],
                     'position': row[7]
@@ -327,8 +342,11 @@ class Database:
         """Obtiene todos los tracks unicos de la BD"""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT id, name, artists, album_id, downloaded, file_path
+            pragma = cursor.execute("PRAGMA table_info(tracks)").fetchall()
+            col_names = {c[1] for c in pragma}
+            album_col = "album_id" if "album_id" in col_names else "album"
+            cursor.execute(f"""
+                SELECT id, name, artists, {album_col}, downloaded, file_path
                 FROM tracks
             """)
 
@@ -338,9 +356,8 @@ class Database:
                     'id': row[0],
                     'name': row[1],
                     'artists': row[2],
-                    # TODO: Corregir esto eventualmente
-                    'album_id': row[3],
-                    'album': row[3],
+                    'album_id': row[3] or '',
+                    'album': row[3] or '',
                     'downloaded': row[4],
                     'file_path': row[5]
                 }

@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spotipytdl</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #121212;
+    --surface:  #181818;
+    --card:     #282828;
+    --hover:    #3e3e3e;
+    --green:    #1DB954;
+    --green-dk: #158a3e;
+    --white:    #ffffff;
+    --muted:    #b3b3b3;
+    --sep:      #333333;
+    --danger:   #e74c3c;
+    --warn:     #f39c12;
+    --radius:   8px;
+    --font:     "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Top bar ── */
+  header {
+    background: #000;
+    padding: 0 32px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--sep);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; }
+  .logo svg { fill: var(--green); }
+  .header-actions { display: flex; gap: 12px; align-items: center; }
+
+  /* ── Buttons ── */
+  button {
+    border: none; cursor: pointer; font-family: var(--font);
+    font-size: 14px; font-weight: 600; border-radius: 500px;
+    padding: 10px 24px; transition: transform .1s, background .15s;
+  }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-primary { background: var(--green); color: #000; }
+  .btn-primary:hover:not(:disabled) { background: #1ed760; }
+
+  .btn-secondary { background: transparent; color: var(--white); border: 1px solid var(--sep); }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--white); background: rgba(255,255,255,.05); }
+
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .btn-danger:hover:not(:disabled) { background: rgba(231,76,60,.1); }
+
+  /* ── Status badge ── */
+  #status-badge {
+    font-size: 12px; font-weight: 600; padding: 4px 12px;
+    border-radius: 500px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  #status-badge.idle    { background: var(--card); color: var(--muted); }
+  #status-badge.running { background: rgba(29,185,84,.15); color: var(--green); }
+  #status-badge.done    { background: rgba(29,185,84,.15); color: var(--green); }
+  #status-badge.error   { background: rgba(231,76,60,.15); color: var(--danger); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .dot.pulse { animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* ── Main layout ── */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 0;
+    min-height: 0;
+  }
+
+  /* ── Sidebar ── */
+  aside {
+    background: #000;
+    border-right: 1px solid var(--sep);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+  }
+
+  .stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .stat-card {
+    background: var(--card); border-radius: var(--radius);
+    padding: 14px 12px; text-align: center;
+  }
+  .stat-card .num { font-size: 26px; font-weight: 700; color: var(--green); }
+  .stat-card .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
+
+  .section-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted); margin-bottom: 8px;
+  }
+
+  .sidebar-actions { display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-actions button { border-radius: var(--radius); width: 100%; text-align: left; padding: 12px 16px; font-size: 14px; }
+
+  /* ── Log console ── */
+  #log-panel {
+    background: #0a0a0a; border: 1px solid var(--sep);
+    border-radius: var(--radius); overflow: hidden;
+    display: none; flex-direction: column;
+  }
+  #log-panel.visible { display: flex; }
+  .log-header {
+    background: var(--card); padding: 8px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 600; color: var(--muted);
+  }
+  #log-output {
+    font-family: "Fira Code", "Consolas", monospace;
+    font-size: 12px; line-height: 1.6;
+    color: #a8ff78; padding: 10px 12px;
+    max-height: 200px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  #log-output .log-err  { color: var(--danger); }
+  #log-output .log-warn { color: var(--warn); }
+  #log-output .log-ok   { color: var(--green); }
+
+  /* ── Content area ── */
+  .content {
+    padding: 28px 32px;
+    overflow-y: auto;
+  }
+
+  .page-title {
+    font-size: 28px; font-weight: 800; margin-bottom: 6px;
+  }
+  .page-sub {
+    color: var(--muted); font-size: 14px; margin-bottom: 28px;
+  }
+
+  /* ── Playlists ── */
+  .playlist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .playlist-card {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 16px 16px 0; cursor: pointer;
+    transition: background .15s, box-shadow .15s;
+    border: 1px solid transparent;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .playlist-card:hover { background: var(--card); box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+  .playlist-card.active { border-color: var(--green); background: var(--card); }
+  .playlist-art {
+    width: 100%; aspect-ratio: 1; border-radius: 4px;
+    background: var(--card); display: flex; align-items: center;
+    justify-content: center; margin-bottom: 12px; overflow: hidden;
+  }
+  .playlist-art svg { fill: var(--sep); width: 40px; height: 40px; }
+  .playlist-card .pl-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .playlist-card .pl-meta { font-size: 12px; color: var(--muted); margin-top: 4px; margin-bottom: 14px; }
+  /* Progress strip — replaces the old verbose badge */
+  .pl-progress {
+    height: 3px; width: calc(100% + 32px); margin: 0 -16px;
+    background: var(--sep); position: relative; flex-shrink: 0;
+  }
+  .pl-progress-fill {
+    height: 100%; border-radius: 0;
+    background: var(--green); transition: width .3s;
+  }
+  .pl-progress-fill.full   { background: var(--green); }
+  .pl-progress-fill.partial { background: var(--warn); }
+
+  /* ── Track list ── */
+  #track-panel { display: none; }
+  #track-panel.visible { display: block; }
+  #playlist-grid.hidden { display: none; }
+  .hidden { display: none !important; }
+  .track-panel-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .btn-back {
+    background: transparent; color: var(--muted); border: none;
+    padding: 6px 4px; font-size: 18px; cursor: pointer; line-height: 1;
+    border-radius: 4px; transition: color .15s;
+  }
+  .btn-back:hover { color: var(--white); }
+  .track-panel-title { font-size: 22px; font-weight: 800; flex: 1; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .8px;
+    color: var(--muted); padding: 0 8px 12px;
+    border-bottom: 1px solid var(--sep);
+  }
+  thead th:first-child { padding-left: 16px; }
+  tbody tr { transition: background .1s; border-radius: 4px; }
+  tbody tr:hover { background: var(--card); }
+  tbody td { padding: 10px 8px; font-size: 14px; vertical-align: middle; }
+  tbody td:first-child { padding-left: 16px; color: var(--muted); width: 40px; text-align: center; }
+  .td-name { font-weight: 600; }
+  .td-artist { color: var(--muted); }
+  .td-album { color: var(--muted); font-size: 13px; }
+  .td-status { text-align: right; padding-right: 16px; }
+  .track-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block; margin-left: auto;
+  }
+  .track-dot.dl  { background: var(--green); }
+  .track-dot.ndl { background: var(--sep); }
+
+  /* ── Loading / empty ── */
+  .loading, .empty {
+    text-align: center; color: var(--muted);
+    padding: 60px 0; font-size: 15px;
+  }
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid var(--sep);
+    border-top-color: var(--green); border-radius: 50%;
+    animation: spin .8s linear infinite; margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--card); color: var(--white);
+    padding: 12px 20px; border-radius: var(--radius);
+    font-size: 14px; font-weight: 600;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5);
+    transform: translateY(80px); opacity: 0;
+    transition: transform .25s, opacity .25s;
+    z-index: 999;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.green { border-left: 4px solid var(--green); }
+  #toast.red   { border-left: 4px solid var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg width="28" height="28" viewBox="0 0 168 168">
+      <path d="M84 0C37.6 0 0 37.6 0 84s37.6 84 84 84 84-37.6 84-84S130.4 0 84 0zm38.5 121.2c-1.5 2.5-4.8 3.3-7.3 1.7-20-12.2-45.2-15-74.9-8.2-2.9.7-5.7-1.1-6.4-4s1.1-5.7 4-6.4c32.5-7.4 60.4-4.2 82.9 9.5 2.5 1.6 3.3 4.9 1.7 7.4zm10.3-22.8c-2 3.1-6.1 4.1-9.2 2.1-22.9-14.1-57.8-18.2-84.9-9.9-3.5 1.1-7.2-.9-8.3-4.4-1.1-3.5.9-7.2 4.4-8.3 31-9.4 69.5-4.8 96 11.3 3.1 1.9 4.1 6.1 2 9.2zm.9-23.7c-27.5-16.3-72.8-17.8-99-9.8-4.2 1.3-8.6-1.1-9.9-5.3-1.3-4.2 1.1-8.6 5.3-9.9 30.1-9.1 80.1-7.4 111.7 11.4 3.8 2.2 5 7.1 2.8 10.8-2.2 3.8-7.1 5.1-10.9 2.8z"/>
+    </svg>
+    spotipytdl
+  </div>
+  <div class="header-actions">
+    <div id="status-badge" class="idle">
+      <span class="dot"></span>
+      <span id="status-text">idle</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <div>
+      <p class="section-title">Library</p>
+      <div class="stat-grid" id="stats-grid">
+        <div class="stat-card"><div class="num" id="stat-playlists">—</div><div class="lbl">Playlists</div></div>
+        <div class="stat-card"><div class="num" id="stat-tracks">—</div><div class="lbl">Tracks</div></div>
+        <div class="stat-card"><div class="num" id="stat-dl">—</div><div class="lbl">Downloaded</div></div>
+        <div class="stat-card"><div class="num" id="stat-albums">—</div><div class="lbl">Albums</div></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="section-title">Actions</p>
+      <div class="sidebar-actions">
+        <button class="btn-primary" id="btn-sync" onclick="triggerJob('sync')">⟳ Sync with Spotify</button>
+        <button class="btn-secondary" id="btn-dl" onclick="triggerJob('download')">↓ Download Pending</button>
+        <button class="btn-secondary" onclick="loadPlaylists()">↺ Refresh</button>
+      </div>
+    </div>
+
+    <div id="log-panel">
+      <div class="log-header">
+        <span>Console</span>
+        <button class="btn-secondary" style="padding:2px 10px;font-size:11px;border-radius:4px" onclick="clearLog()">clear</button>
+      </div>
+      <div id="log-output"></div>
+    </div>
+  </aside>
+
+  <div class="content">
+    <div class="page-title">Your Library</div>
+    <div class="page-sub" id="page-sub">Loading playlists…</div>
+
+    <div class="playlist-grid" id="playlist-grid"></div>
+
+    <div id="track-panel">
+      <div class="track-panel-header">
+        <button class="btn-back" onclick="closeTrackPanel()" title="Back to playlists">←</button>
+        <div class="track-panel-title" id="track-panel-title"></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Title</th>
+            <th>Artist</th>
+            <th>Album</th>
+            <th style="text-align:right;padding-right:16px">DL</th>
+          </tr>
+        </thead>
+        <tbody id="track-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const BASE = '';
+let _sse = null;
+let _pollTimer = null;
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function $(id) { return document.getElementById(id); }
+
+function toast(msg, type = 'green') {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', 3000);
+}
+
+function fmt(n) {
+  if (n == null) return '—';
+  if (n >= 1000) return (n/1000).toFixed(1) + 'k';
+  return n;
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch(`${BASE}/api/stats`);
+    if (!r.ok) return;
+    const s = await r.json();
+    $('stat-playlists').textContent = fmt(s.total_playlists ?? s.playlists);
+    $('stat-tracks').textContent    = fmt(s.total_tracks ?? s.tracks);
+    $('stat-dl').textContent        = fmt(s.downloaded_tracks ?? s.downloaded);
+    $('stat-albums').textContent    = fmt(s.total_albums ?? s.albums);
+  } catch(e) {}
+}
+
+// ── Playlists ─────────────────────────────────────────────────────────────────
+let _playlists = [];
+
+async function loadPlaylists() {
+  const grid = $('playlist-grid');
+  grid.innerHTML = '<div class="loading"><div class="spinner"></div>Loading playlists…</div>';
+  $('page-sub').textContent = '';
+  try {
+    const r = await fetch(`${BASE}/api/playlists`);
+    if (!r.ok) throw new Error(r.statusText);
+    _playlists = await r.json();
+    renderPlaylists(_playlists);
+    $('page-sub').textContent = `${_playlists.length} playlist${_playlists.length !== 1 ? 's' : ''}`;
+    loadStats();
+  } catch(e) {
+    grid.innerHTML = `<div class="empty">Could not load playlists.<br><small>${e.message}</small></div>`;
+    $('page-sub').textContent = 'Error loading library';
+  }
+}
+
+function renderPlaylists(list) {
+  const grid = $('playlist-grid');
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty">No playlists yet.<br>Hit <strong>Sync with Spotify</strong> to import.</div>';
+    return;
+  }
+  grid.innerHTML = list.map(pl => {
+    const pct = pl.total_tracks > 0 ? Math.round((pl.downloaded_tracks ?? 0) / pl.total_tracks * 100) : 0;
+    const fillPct = Math.min(pct, 100);
+    const fillCls = pct === 100 ? 'full' : pct > 0 ? 'partial' : '';
+    return `
+    <div class="playlist-card" id="plcard-${pl.id}" data-plid="${pl.id}">
+      <div class="playlist-art">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
+        </svg>
+      </div>
+      <div class="pl-name" title="${escHtml(pl.name)}">${escHtml(pl.name)}</div>
+      <div class="pl-meta">${pl.total_tracks ?? 0} tracks · ${escHtml(pl.owner ?? '')}</div>
+      <div class="pl-progress"><div class="pl-progress-fill ${fillCls}" style="width:${fillPct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Event delegation — handles clicks on playlist cards without inline JS
+$('playlist-grid').addEventListener('click', e => {
+  const card = e.target.closest('[data-plid]');
+  if (!card) return;
+  const pl = _playlists.find(p => p.id === card.dataset.plid);
+  if (pl) openPlaylist(pl.id, pl.name);
+});
+
+// ── Track panel ───────────────────────────────────────────────────────────────
+let _activePlaylist = null;
+
+async function openPlaylist(id, name) {
+  // highlight active card
+  document.querySelectorAll('.playlist-card').forEach(c => c.classList.remove('active'));
+  const card = $(`plcard-${id}`);
+  if (card) card.classList.add('active');
+
+  $('track-panel-title').textContent = name;
+  const panel = $('track-panel');
+  panel.classList.add('visible');
+  $('playlist-grid').classList.add('hidden');
+  $('page-sub').classList.add('hidden');
+  const tbody = $('track-tbody');
+  tbody.innerHTML = '<tr><td colspan="5"><div class="loading"><div class="spinner"></div>Loading…</div></td></tr>';
+
+  try {
+    const r = await fetch(`${BASE}/api/playlists/${id}/tracks`);
+    if (!r.ok) throw new Error(r.statusText);
+    const tracks = await r.json();
+    renderTracks(tracks);
+    _activePlaylist = id;
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Error: ${e.message}</td></tr>`;
+  }
+}
+
+function renderTracks(tracks) {
+  const tbody = $('track-tbody');
+  if (!tracks.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No tracks in this playlist.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = tracks.map((t, i) => {
+    const artists = Array.isArray(t.artists) ? t.artists.join(', ') : (t.artists ?? '');
+    const dlCls = t.downloaded ? 'dl' : 'ndl';
+    const dlTitle = t.downloaded ? 'Downloaded' : 'Not downloaded';
+    return `<tr>
+      <td>${i + 1}</td>
+      <td class="td-name">${escHtml(t.name)}</td>
+      <td class="td-artist">${escHtml(artists)}</td>
+      <td class="td-album">${escHtml(t.album ?? '')}</td>
+      <td class="td-status"><span class="track-dot ${dlCls}" title="${dlTitle}"></span></td>
+    </tr>`;
+  }).join('');
+}
+
+function closeTrackPanel() {
+  $('track-panel').classList.remove('visible');
+  $('playlist-grid').classList.remove('hidden');
+  $('page-sub').classList.remove('hidden');
+  document.querySelectorAll('.playlist-card').forEach(c => c.classList.remove('active'));
+  _activePlaylist = null;
+}
+
+// ── Jobs ──────────────────────────────────────────────────────────────────────
+async function triggerJob(type) {
+  const btn = type === 'sync' ? $('btn-sync') : $('btn-dl');
+  btn.disabled = true;
+
+  try {
+    const r = await fetch(`${BASE}/api/${type}`, { method: 'POST' });
+    if (r.status === 409) { toast('A job is already running', 'red'); btn.disabled = false; return; }
+    if (!r.ok) throw new Error(await r.text());
+    toast(`${type === 'sync' ? 'Sync' : 'Download'} started`);
+    openLogPanel();
+    startSSE();
+    pollStatus();
+  } catch(e) {
+    toast(`Error: ${e.message}`, 'red');
+    btn.disabled = false;
+  }
+}
+
+function openLogPanel() {
+  const panel = $('log-panel');
+  panel.classList.add('visible');
+}
+
+function clearLog() {
+  $('log-output').innerHTML = '';
+}
+
+function appendLog(line) {
+  const out = $('log-output');
+  const div = document.createElement('div');
+  const lower = line.toLowerCase();
+  if (lower.includes('error') || lower.includes('err ') || lower.includes('failed')) div.className = 'log-err';
+  else if (lower.includes('warn')) div.className = 'log-warn';
+  else if (lower.includes('done') || lower.includes('✓') || lower.includes('exitoso')) div.className = 'log-ok';
+  div.textContent = line;
+  out.appendChild(div);
+  out.scrollTop = out.scrollHeight;
+}
+
+function startSSE() {
+  if (_sse) { _sse.close(); _sse = null; }
+  _sse = new EventSource(`${BASE}/api/jobs/logs`);
+  _sse.onmessage = e => appendLog(e.data);
+  _sse.onerror = () => { /* reconnect handled by browser */ };
+}
+
+function stopSSE() {
+  if (_sse) { _sse.close(); _sse = null; }
+}
+
+function pollStatus() {
+  clearTimeout(_pollTimer);
+  _pollTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(`${BASE}/api/jobs/status`);
+      const s = await r.json();
+      updateStatusBadge(s.status);
+      if (s.status === 'running') {
+        pollStatus(); // keep polling
+      } else {
+        // job finished
+        stopSSE();
+        $('btn-sync').disabled = false;
+        $('btn-dl').disabled = false;
+        loadPlaylists(); // refresh data
+        if (s.status === 'done') toast('Job completed ✓');
+        else if (s.status === 'error') toast('Job ended with errors', 'red');
+      }
+    } catch(e) { pollStatus(); }
+  }, 1500);
+}
+
+function updateStatusBadge(status) {
+  const badge = $('status-badge');
+  const dot = badge.querySelector('.dot');
+  $('status-text').textContent = status;
+  badge.className = status;
+  dot.className = `dot ${status === 'running' ? 'pulse' : ''}`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  loadPlaylists();
+
+  // Check if a job was already running on page load
+  try {
+    const r = await fetch(`${BASE}/api/jobs/status`);
+    const s = await r.json();
+    updateStatusBadge(s.status);
+    if (s.status === 'running') {
+      openLogPanel();
+      if (s.logs && s.logs.length) s.logs.forEach(appendLog);
+      startSSE();
+      pollStatus();
+    }
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>
