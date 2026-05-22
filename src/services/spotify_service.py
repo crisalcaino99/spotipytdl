@@ -34,9 +34,9 @@ class SpotifyService:
             scope=scope
         )
 
-        sp = spotipy.Spotify(auth_manager=auth_manager)
+        self.sp = spotipy.Spotify(auth_manager=auth_manager)
         print('-Autenticado-')
-        return sp
+        return self.sp
     
     def get_user_playlists(self) -> list[PlaylistData]:
         """Obtiene todas las playlists del usuario"""

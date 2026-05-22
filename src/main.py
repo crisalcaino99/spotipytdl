@@ -1,7 +1,12 @@
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent.parent / '.env')
 
 from database.db_manager import Database
 from schemas.spotify_types import PlaylistData
@@ -10,12 +15,9 @@ from services.spotify_service import SpotifyService
 
 def sync_spotify_to_database() -> None:
     """ Sincroniza playlists de Spotify a la base de datos"""
-    # Careful in here.
-
-    # TODO: mover esto a variables de entorno
-    CLIENT_ID = '767bf032d25042e0a2246f1c10ebf0d7'
-    CLIENT_SECRET = '655f4fc8750a4d1db6f0d75244facbb1'
-    REDIRECT_URI = 'https://example.com/callback'
+    CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
+    CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
+    REDIRECT_URI = os.environ.get('SPOTIFY_REDIRECT_URI', 'http://localhost:8888/callback')
 
     db = Database()
     spotify = SpotifyService(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)

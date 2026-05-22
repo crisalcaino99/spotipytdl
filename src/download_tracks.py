@@ -4,9 +4,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from services.metadata_service import embed_metadata_for_track
-from src.database.db_manager import Database
-from src.schemas.spotify_types import TrackDict
-from src.services.yt_service import Downloader
+from database.db_manager import Database
+from schemas.spotify_types import TrackDict
+from services.yt_service import Downloader
 
 # TODO: Crear funcion que descarga desde la playlist
 # TODO: Mover esto a utilities
@@ -53,7 +53,7 @@ def download_all_tracks(max_downloads: None|int):
 # this one is sooooo wrong
 def download_single_track(track: TrackDict) -> str | None:
 
-    from src.services.scrape_covers_v2 import ensure_album_cover
+    from services.scrape_covers_v2 import ensure_album_cover
 
     db = Database('music.db')
     artists = track['artists']

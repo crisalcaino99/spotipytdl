@@ -48,9 +48,10 @@ def embed_metadata_for_track(
         artists = ", ".join(track["artists"])
         album_name = track["album"]
 
+        from mutagen.id3 import TPE1, TALB
         tags.add(TIT2(encoding=3, text=title))
-        tags.add(TIT2(encoding=3, text=artists))
-        tags.add(TIT2(encoding=3, text=album_name))
+        tags.add(TPE1(encoding=3, text=artists))
+        tags.add(TALB(encoding=3, text=album_name))
         
         if cover_path is not None and cover_path.exists():
             
