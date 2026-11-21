@@ -4,170 +4,36 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Spotipyt</title>
-<style>
-  :root { color-scheme: dark; --bg:#12151a; --panel:#1a1f27; --line:#2b3240;
-          --fg:#e6e9ef; --dim:#8b94a5; --ok:#3ddc97; --err:#ff5c7a; --accent:#5cc8ff; }
-  * { box-sizing: border-box; }
-  body { margin:0; font:14px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
-  header { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line); }
-  h1 { font-size:15px; margin:0; letter-spacing:2px; }
-  main { padding:20px; display:grid; gap:18px; grid-template-columns:1fr 1fr; align-items:start; }
-  @media (max-width:860px) { main { grid-template-columns:1fr; } }
-  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
-  section.wide { grid-column:1/-1; }
-  h2 { font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--dim); margin:0 0 12px; }
-  .cards { display:flex; gap:10px; flex-wrap:wrap; }
-  .card { flex:1 1 110px; background:#141922; border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
-  .card b { display:block; font-size:22px; }
-  .card span { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.8px; }
-  table { width:100%; border-collapse:collapse; }
-  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
-  th { color:var(--dim); font-weight:500; font-size:10px; text-transform:uppercase; letter-spacing:.8px; }
-  tbody tr:not(:has(th)) { cursor:pointer; }
-  tbody tr:hover { background:#1f2632; }
-  button { background:#22303f; color:var(--fg); border:1px solid var(--line);
-           border-radius:6px; padding:3px 10px; cursor:pointer; font-size:12px; }
-  button:hover { border-color:var(--accent); }
-  button:disabled { opacity:.4; cursor:default; }
-  .bar { height:6px; background:#10141a; border-radius:3px; overflow:hidden; }
-  .bar i { display:block; height:100%; background:var(--accent); transition:width .3s; }
-  .job { display:grid; grid-template-columns:1fr auto; gap:4px 10px; padding:8px 0; border-bottom:1px solid var(--line); }
-  .job small, .muted { color:var(--dim); }
-  .done { color:var(--ok); } .failed { color:var(--err); }
-</style>
+<link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
-<header>
-  <h1>SPOTIPYT</h1>
-  <span id="health" class="muted">connecting&hellip;</span>
-</header>
-<main>
-  <section class="wide">
-    <h2>Library</h2>
-    <div class="cards" id="cards"></div>
-  </section>
 
-  <section>
-    <h2>Playlists</h2>
-    <table>
-      <thead><tr><th>Name</th><th>Owner</th><th>Tracks</th></tr></thead>
-      <tbody id="playlists"></tbody>
-    </table>
-  </section>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">SPOTIPYT</div>
+    <input id="filter" class="filter" type="search"
+           placeholder="Filter playlists…" autocomplete="off" aria-label="Filter playlists">
+    <nav id="playlists" class="playlists"></nav>
+  </aside>
 
-  <section>
-    <h2>Download queue</h2>
-    <div id="jobs" class="muted">idle</div>
-  </section>
+  <main class="main">
+    <header class="topbar">
+      <form id="search-form" class="searchbar">
+        <input id="q" type="search" autocomplete="off"
+               placeholder="Search tracks, artists, albums…" aria-label="Search tracks">
+      </form>
+      <div id="stats" class="stats muted small"></div>
+    </header>
 
-  <section class="wide">
-    <h2 id="tracks-title">Tracks</h2>
-    <table>
-      <thead><tr><th>#</th><th>Name</th><th>Artists</th><th>Status</th></tr></thead>
-      <tbody id="tracks"></tbody>
-    </table>
-  </section>
-</main>
+    <div id="notice" class="notice" role="status"></div>
 
-<script>
-const $ = (id) => document.getElementById(id);
-let selectedPlaylist = null;
+    <section id="content" class="content"></section>
+    <section id="downloads" class="downloads"></section>
+  </main>
+</div>
 
-async function api(path, init) {
-  const res = await fetch(path, init);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
-}
+<div id="player" class="player"></div>
 
-async function loadStats() {
-  const s = await api('/api/stats');
-  const cards = [
-    ['tracks', s.total_tracks], ['downloaded', s.downloaded_tracks],
-    ['playlists', s.total_playlists], ['albums', s.total_albums],
-    ['with covers', s.albums_with_covers],
-  ];
-  $('cards').innerHTML = cards
-    .map(([k, v]) => `<div class="card"><b>${v ?? '-'}</b><span>${k}</span></div>`).join('');
-  $('health').textContent = 'api online';
-}
-
-async function loadPlaylists() {
-  const { items } = await api('/api/playlists');
-  $('playlists').innerHTML = items.length
-    ? items.map((p) => `<tr data-id="${p.id}" data-name="${p.name}">
-        <td>${p.name}</td><td class="muted">${p.owner ?? ''}</td>
-        <td>${p.total_tracks ?? '?'}</td></tr>`).join('')
-    : '<tr><td colspan="3" class="muted">no playlists yet</td></tr>';
-}
-
-async function loadTracks(playlistId, name) {
-  const data = playlistId
-    ? await api(`/api/playlists/${playlistId}`)
-    : await api('/api/tracks?limit=200');
-  const tracks = playlistId ? data.tracks : data.items;
-  $('tracks-title').textContent = name ? `Tracks \u2014 ${name}` : 'Tracks';
-  $('tracks').innerHTML = tracks.length
-    ? tracks.map((t, i) => {
-        const status = t.downloaded
-          ? '<span class="done">downloaded</span>'
-          : `<button data-track="${t.id}">download</button>`;
-        // positions are stored 0-based; show 1-based ordinals
-        const ordinal = t.position != null ? t.position + 1 : i + 1;
-        return `<tr><td class="muted">${ordinal}</td><td>${t.name}</td>
-          <td class="muted">${(t.artists || []).join(', ')}</td><td>${status}</td></tr>`;
-      }).join('')
-    : '<tr><td colspan="4" class="muted">no tracks</td></tr>';
-}
-
-async function loadJobs() {
-  const { items } = await api('/api/downloads');
-  const box = $('jobs');
-  if (!items.length) { box.className = 'muted'; box.textContent = 'idle'; return; }
-  box.className = '';
-  box.innerHTML = items.slice(0, 40).map((j) => {
-    const pct = Math.round((j.progress || 0) * 100);
-    const err = j.error ? ` <span class="failed">${j.error}</span>` : '';
-    return `<div class="job">
-      <div>${j.name} <small>${(j.artists || []).join(', ')}</small></div>
-      <div class="muted">${j.state}</div>
-      <div class="bar"><i style="width:${pct}%"></i></div>
-      <div class="muted">${pct}%${err}</div>
-    </div>`;
-  }).join('');
-}
-
-$('playlists').addEventListener('click', (e) => {
-  const row = e.target.closest('tr[data-id]');
-  if (!row) return;
-  selectedPlaylist = row.dataset.id;
-  loadTracks(selectedPlaylist, row.dataset.name);
-});
-
-$('tracks').addEventListener('click', async (e) => {
-  const btn = e.target.closest('button[data-track]');
-  if (!btn) return;
-  btn.disabled = true;
-  try {
-    await api('/api/downloads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ track_ids: [btn.dataset.track] }),
-    });
-    await loadJobs();
-  } catch (err) {
-    $('health').textContent = `queue error \u2014 ${err.message}`;
-  }
-});
-
-async function refresh() {
-  try { await Promise.all([loadStats(), loadPlaylists(), loadJobs()]); }
-  catch (err) { $('health').textContent = `offline \u2014 ${err.message}`; }
-}
-
-refresh();
-loadTracks(null);
-setInterval(refresh, 2000);
-setInterval(() => loadTracks(selectedPlaylist), 10000);
-</script>
+<script type="module" src="/static/js/main.js"></script>
 </body>
 </html>

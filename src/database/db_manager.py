@@ -153,6 +153,17 @@ class Database:
             
         return None
     
+    def get_track_file_path(self, track_id: str) -> str | None:
+        """Return the local audio path recorded for a track, if any."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT file_path FROM tracks WHERE id = ?", (track_id,)
+            )
+            row = cursor.fetchone()
+
+        return row[0] if row and row[0] else None
+
     def save_playlist(self, playlist: PlaylistData) -> None:
         """Guarda una playlist en la BD"""
         with sqlite3.connect(self.db_path) as conn:
