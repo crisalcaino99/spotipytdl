@@ -1,12 +1,15 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# This module lives directly in ``src``, so ``src`` is the import root its bare
+# imports (``services.*``) expect. Inserting the repo root here, as this line
+# used to, never made those imports resolvable.
+sys.path.insert(0, str(Path(__file__).parent))
 
 from services.metadata_service import embed_metadata_for_track
 from src.database.db_manager import Database
 from src.schemas.spotify_types import TrackDict
-from src.services.yt_service import Downloader
+from src.services.yt_service import Downloader, ProgressCallback
 
 # TODO: Crear funcion que descarga desde la playlist
 # TODO: Mover esto a utilities
@@ -51,7 +54,10 @@ def download_all_tracks(max_downloads: None|int):
 # some test lol
 # TODO: FIX THIS ASAP
 # this one is sooooo wrong
-def download_single_track(track: TrackDict) -> str | None:
+def download_single_track(
+        track: TrackDict,
+        on_progress: ProgressCallback | None = None,
+) -> str | None:
 
     from src.services.scrape_covers_v2 import ensure_album_cover
 
@@ -61,7 +67,9 @@ def download_single_track(track: TrackDict) -> str | None:
     
     download_folder = Path(__file__).resolve().parent.parent / "downloads"
     youtube = Downloader(download_dir = download_folder, ffmpeg_location=None)
-    file_path = youtube.search_and_download(track['name'], result)
+    file_path = youtube.search_and_download(
+        track['name'], result, on_progress=on_progress
+    )
     
     if file_path:
         # marco el track como descargado y señalo su path

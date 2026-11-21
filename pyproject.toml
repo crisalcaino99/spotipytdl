@@ -28,6 +28,7 @@ requests = "2.34.0"
 rich = "15.0.0"
 spotipy = "2.26.0"
 yt-dlp = "2026.3.17"
+uvicorn = "^0.54.0"
 
 
 [[tool.poetry.packages]]
