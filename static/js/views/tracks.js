@@ -1,84 +1,129 @@
 import { api } from '../api.js';
-import { esc, memo, plural } from '../ui.js';
+import { artFor, downloadedParam, esc, memo, plural } from '../ui.js';
 
 /**
- * Main panel: the track table.
+ * Main panel: playlist hero (when applicable) plus the track table.
  *
- * Downloaded tracks get a play button; everything else gets a download button.
- * Click handlers are delegated from the container, so the table can be
- * re-rendered freely without re-binding listeners.
+ * Playlist tracks arrive unpaginated, so the download filter is applied here.
+ * Paginated routes (all tracks, search) filter server-side in main.js.
  */
 export function tracksView(root, { store, player, loadMore }) {
   const render = memo(
     (state) => {
-      const tracks = state.tracks;
-
-      if (state.loadingTracks && tracks.length === 0) {
+      if (state.loadingTracks && state.tracks.length === 0) {
         root.innerHTML = '<p class="muted">Loading…</p>';
         return;
       }
 
-      let title = 'All tracks';
-      if (state.route.name === 'playlist') title = state.playlistName || 'Playlist';
-      if (state.route.name === 'search') title = `Search: ${state.route.query}`;
+      const isPlaylist = state.route.name === 'playlist';
+      const wanted = isPlaylist ? downloadedParam(state.filter) : undefined;
 
-      const remaining = state.tracksTotal - tracks.length;
+      const all = state.tracks;
+      const tracks =
+        wanted === undefined
+          ? all
+          : all.filter((track) => Boolean(track.downloaded) === wanted);
+
+      const downloadedCount = all.filter((track) => track.downloaded).length;
+
+      let header;
+      if (isPlaylist) {
+        const art = artFor(state.playlistName || state.route.id);
+        header = `
+          <div class="hero">
+            <div class="hero-art" style="${art.style}">${esc(art.initial)}</div>
+            <div>
+              <span class="hero-kind">Playlist</span>
+              <h1>${esc(state.playlistName || 'Playlist')}</h1>
+              <div class="hero-meta">
+                ${downloadedCount}/${all.length} downloaded ·
+                ${plural(all.length, 'track')}
+              </div>
+            </div>
+          </div>`;
+      } else {
+        const title =
+          state.route.name === 'search'
+            ? `Results for “${state.route.query}”`
+            : 'All tracks';
+        header = `
+          <div class="content-head">
+            <h2>${esc(title)}</h2>
+            <span class="muted small">
+              ${plural(state.tracksTotal, 'track')} · ${downloadedCount} downloaded
+            </span>
+          </div>`;
+      }
+
+      const remaining = state.tracksTotal - all.length;
 
       root.innerHTML = `
-        <div class="content-head">
-          <h2>${esc(title)}</h2>
-          <span class="muted small">${plural(state.tracksTotal, 'track')}</span>
-        </div>
+        ${header}
         <div class="table-wrap">
           <table class="tracks">
             <thead>
-              <tr><th class="num">#</th><th>Title</th><th>Artist</th><th>Album</th><th></th></tr>
+              <tr>
+                <th class="num">#</th><th>Title</th><th>Artist</th><th>Album</th><th></th>
+              </tr>
             </thead>
             <tbody>
-              ${tracks
-                .map((track, i) => {
-                  const isPlaying = track.id === state.playerTrackId;
-                  const ordinal = track.position != null ? track.position + 1 : i + 1;
-                  const action = track.downloaded
-                    ? `<button class="icon play" data-play="${esc(track.id)}" title="Play">▶</button>`
-                    : `<button class="icon" data-download="${esc(track.id)}" title="Download">↓</button>`;
+              ${
+                tracks
+                  .map((track, i) => {
+                    const playable = Boolean(track.downloaded);
+                    const ordinal = track.position != null ? track.position + 1 : i + 1;
+                    const action = playable
+                      ? `<button class="icon play" data-play="${esc(track.id)}" title="Play">▶</button>`
+                      : `<button class="icon" data-download="${esc(track.id)}" title="Download">↓</button>`;
+                    const classes = [
+                      playable ? 'playable' : '',
+                      track.id === state.playerTrackId ? 'playing' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ');
 
-                  return `
-                    <tr data-id="${esc(track.id)}" class="${isPlaying ? 'playing' : ''}">
-                      <td class="muted num">${ordinal}</td>
-                      <td>
-                        <span class="title">${esc(track.name)}</span>
-                        ${track.downloaded ? '' : '<span class="tag">not downloaded</span>'}
-                      </td>
-                      <td class="muted">${esc((track.artists || []).join(', '))}</td>
-                      <td class="muted">${esc(track.album || '')}</td>
-                      <td class="actions">${action}</td>
-                    </tr>`;
-                })
-                .join('')}
+                    return `
+                      <tr data-id="${esc(track.id)}" class="${classes}">
+                        <td class="num">
+                          <span class="idx">${ordinal}</span><span class="glyph">▶</span>
+                        </td>
+                        <td>
+                          <span class="title">${esc(track.name)}</span>
+                          ${playable ? '' : '<span class="tag">missing</span>'}
+                        </td>
+                        <td class="muted">${esc((track.artists || []).join(', '))}</td>
+                        <td class="muted">${esc(track.album || '')}</td>
+                        <td class="actions">${action}</td>
+                      </tr>`;
+                  })
+                  .join('') ||
+                '<tr><td colspan="5" class="muted">Nothing matches this filter.</td></tr>'
+              }
             </tbody>
           </table>
         </div>
         ${
           state.route.name === 'all' && remaining > 0
-            ? `<button class="more" id="more">Load more (${remaining} left)</button>`
+            ? `<button class="more" id="more">Load more (${remaining})</button>`
             : ''
         }`;
 
       const moreButton = root.querySelector('#more');
       if (moreButton) moreButton.addEventListener('click', () => loadMore());
     },
-    (state) => [
-      state.route.name,
-      state.route.id,
-      state.route.query,
-      state.tracks.length,
-      state.tracksTotal,
-      state.playlistName,
-      state.playerTrackId,
-      state.loadingTracks,
-      state.tracks.map((track) => (track.downloaded ? 1 : 0)).join(''),
-    ].join('|'),
+    (state) =>
+      [
+        state.route.name,
+        state.route.id,
+        state.route.query,
+        state.filter,
+        state.tracks.length,
+        state.tracksTotal,
+        state.playlistName,
+        state.playerTrackId,
+        state.loadingTracks,
+        state.tracks.map((track) => (track.downloaded ? 1 : 0)).join(''),
+      ].join('|'),
   );
 
   root.addEventListener('click', async (event) => {
@@ -101,9 +146,9 @@ export function tracksView(root, { store, player, loadMore }) {
     }
 
     const row = event.target.closest('tr[data-id]');
-    if (row) {
+    if (row && row.classList.contains('playable')) {
       const track = store.state.tracks.find((item) => item.id === row.dataset.id);
-      if (track && track.downloaded) player.playTrack(track, store.state.tracks);
+      if (track) player.playTrack(track, store.state.tracks);
     }
   });
 

@@ -10,19 +10,36 @@
 
 <div class="app">
   <aside class="sidebar">
-    <div class="brand">SPOTIPYT</div>
+    <div class="brand"><span class="logo">◉</span> Spotipyt</div>
+
+    <a class="nav-item nav-all" href="#/all" id="nav-all">
+      <span class="nav-icon">▦</span>
+      <span>All tracks</span>
+      <em id="nav-all-count"></em>
+    </a>
+
+    <div class="side-label">Your Library</div>
     <input id="filter" class="filter" type="search"
-           placeholder="Filter playlists…" autocomplete="off" aria-label="Filter playlists">
+           placeholder="Filter playlists" autocomplete="off" aria-label="Filter playlists">
+
     <nav id="playlists" class="playlists"></nav>
   </aside>
 
   <main class="main">
     <header class="topbar">
       <form id="search-form" class="searchbar">
+        <span class="search-icon">⌕</span>
         <input id="q" type="search" autocomplete="off"
-               placeholder="Search tracks, artists, albums…" aria-label="Search tracks">
+               placeholder="What do you want to listen to?" aria-label="Search tracks">
       </form>
-      <div id="stats" class="stats muted small"></div>
+
+      <div class="segmented" id="segmented" role="group" aria-label="Download filter">
+        <button type="button" data-filter="all" class="active">All</button>
+        <button type="button" data-filter="downloaded">Downloaded</button>
+        <button type="button" data-filter="missing">Missing</button>
+      </div>
+
+      <div id="stats" class="stats"></div>
     </header>
 
     <div id="notice" class="notice" role="status"></div>

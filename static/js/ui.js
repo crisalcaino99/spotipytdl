@@ -51,3 +51,32 @@ export function debounce(fn, ms = 200) {
     timer = setTimeout(() => fn(...args), ms);
   };
 }
+
+/**
+ * Deterministic cover-art stand-in.
+ *
+ * There is no album art in the database (cover_url was never persisted), so
+ * each playlist gets a stable gradient derived from its name plus an initial.
+ */
+export function artFor(seed) {
+  const text = String(seed || '?');
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+  }
+  const hue = hash % 360;
+
+  return {
+    style:
+      `background: linear-gradient(135deg,` +
+      ` hsl(${hue} 58% 34%), hsl(${(hue + 48) % 360} 62% 16%))`,
+    initial: text.trim().charAt(0).toUpperCase() || '♪',
+  };
+}
+
+/** "downloaded" / "missing" / "all" -> the API's boolean or undefined. */
+export function downloadedParam(filter) {
+  if (filter === 'downloaded') return true;
+  if (filter === 'missing') return false;
+  return undefined;
+}

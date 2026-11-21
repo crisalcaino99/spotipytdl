@@ -420,6 +420,31 @@ class Database:
 
         return stats
 
+    def get_playlist_download_counts(self) -> dict[str, dict[str, int]]:
+        """Per-playlist download progress.
+
+        Returns ``{playlist_id: {"tracks": n, "downloaded": m}}``. Counting
+        through the join keeps playlists whose tracks have no rows out of the
+        result instead of reporting a phantom count.
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    playlist_tracks.playlist_id,
+                    COUNT(*) AS tracks,
+                    SUM(CASE WHEN tracks.downloaded = 1 THEN 1 ELSE 0 END) AS downloaded
+                FROM playlist_tracks
+                JOIN tracks ON tracks.id = playlist_tracks.track_id
+                GROUP BY playlist_tracks.playlist_id
+                """
+            ).fetchall()
+
+        return {
+            str(playlist_id): {"tracks": int(tracks), "downloaded": int(downloaded or 0)}
+            for playlist_id, tracks, downloaded in rows
+        }
+
     # Revisar esta funcion!
     # quizas conviene construir otro TypeDict
     def get_all_playlists_summary(self) -> list[dict[str, str | int | None]]:

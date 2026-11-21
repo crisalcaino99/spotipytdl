@@ -27,8 +27,9 @@ questionary = "2.1.1"
 requests = "2.34.0"
 rich = "15.0.0"
 spotipy = "2.26.0"
-yt-dlp = "2026.3.17"
+yt-dlp = "^2026.10.26"
 uvicorn = "^0.54.0"
+imageio-ffmpeg = "^0.8.1"
 
 
 [[tool.poetry.packages]]
