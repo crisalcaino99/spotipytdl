@@ -20,7 +20,16 @@ def list_tracks(
     """List tracks from the local database, paginated."""
     db = get_db()
 
-    items = db.search_tracks(q) if q else db.get_all_unique_tracks()
+    items = db.get_all_unique_tracks()
+
+    if q:
+        needle = q.lower()
+        items = [
+            track for track in items
+            if needle in track["name"].lower()
+            or needle in (track["album"] or "").lower()
+            or any(needle in artist.lower() for artist in track["artists"])
+        ]
 
     if downloaded is not None:
         items = [track for track in items if bool(track.get("downloaded")) is downloaded]

@@ -111,7 +111,9 @@ async function loadTracks(playlistId, name) {
         const status = t.downloaded
           ? '<span class="done">downloaded</span>'
           : `<button data-track="${t.id}">download</button>`;
-        return `<tr><td class="muted">${t.position ?? i + 1}</td><td>${t.name}</td>
+        // positions are stored 0-based; show 1-based ordinals
+        const ordinal = t.position != null ? t.position + 1 : i + 1;
+        return `<tr><td class="muted">${ordinal}</td><td>${t.name}</td>
           <td class="muted">${(t.artists || []).join(', ')}</td><td>${status}</td></tr>`;
       }).join('')
     : '<tr><td colspan="4" class="muted">no tracks</td></tr>';

@@ -328,8 +328,17 @@ class Database:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, name, artists, album_id, downloaded, file_path
+                SELECT
+                    tracks.id,
+                    tracks.name,
+                    tracks.artists,
+                    COALESCE(albums.name, 'Unknown'),
+                    tracks.album_id,
+                    tracks.downloaded,
+                    tracks.file_path
                 FROM tracks
+                LEFT JOIN albums
+                    ON tracks.album_id = albums.id
             """)
 
             tracks: list[TrackDict] = []
@@ -337,12 +346,14 @@ class Database:
                 td: TrackDict = {
                     'id': row[0],
                     'name': row[1],
-                    'artists': row[2],
-                    # TODO: Corregir esto eventualmente
-                    'album_id': row[3],
+                    # artists is a comma-separated TEXT column; callers expect a
+                    # list. Returning the raw string made ', '.join() spell out
+                    # every character in download_all_tracks.
+                    'artists': [artist.strip() for artist in (row[2] or "").split(",")],
                     'album': row[3],
-                    'downloaded': row[4],
-                    'file_path': row[5]
+                    'album_id': row[4],
+                    'downloaded': bool(row[5]),
+                    'file_path': row[6]
                 }
                 tracks.append(td)
             
@@ -502,7 +513,7 @@ class Database:
             )
             positions = [row[0] for row in cursor.fetchall()]
         
-        expected = list(range(1, len(positions) + 1))
+        expected = list(range(len(positions)))
         return positions == expected
 
     def mark_playlist_as_synced(
