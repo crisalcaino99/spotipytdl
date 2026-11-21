@@ -7,7 +7,32 @@ reportUnknownVariableType = false
 reportUnknownParameterType = false
 reportUnknownLambdaType = false
 
-[tool.ruff]
-line-length = 88
-target-version = "py311"
-select = ["E", "F", "I", "B"]
+[tool.poetry]
+name = "spotipytdl"
+version = "0.1.0"
+description = "A Spotify playlist manager with CLI and P2P capabilities."
+authors = ["crisalcaino99 <cjalcaino@uc.cl>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/crisalcaino99/spotipytdl"
+repository = "https://github.com/crisalcaino99/spotipytdl"
+keywords = ["spotify", "playlist", "music", "p2p"]
+
+[tool.poetry.dependencies]
+python = ">=3.12"
+fastapi = "0.136.1"
+mutagen = "1.47.0"
+python-dotenv = "1.2.2"
+questionary = "2.1.1"
+requests = "2.34.0"
+rich = "15.0.0"
+spotipy = "2.26.0"
+yt-dlp = "2026.3.17"
+
+
+[[tool.poetry.packages]]
+include = "src"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

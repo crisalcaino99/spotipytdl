@@ -17,3 +17,11 @@
 .db-journal
 .db.backup
 .backup
+
+# Python bytecode / tooling caches
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
