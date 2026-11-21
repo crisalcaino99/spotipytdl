@@ -153,6 +153,17 @@ class Database:
             
         return None
     
+    def get_track_file_path(self, track_id: str) -> str | None:
+        """Return the local audio path recorded for a track, if any."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT file_path FROM tracks WHERE id = ?", (track_id,)
+            )
+            row = cursor.fetchone()
+
+        return row[0] if row and row[0] else None
+
     def save_playlist(self, playlist: PlaylistData) -> None:
         """Guarda una playlist en la BD"""
         with sqlite3.connect(self.db_path) as conn:
@@ -328,8 +339,17 @@ class Database:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, name, artists, album_id, downloaded, file_path
+                SELECT
+                    tracks.id,
+                    tracks.name,
+                    tracks.artists,
+                    COALESCE(albums.name, 'Unknown'),
+                    tracks.album_id,
+                    tracks.downloaded,
+                    tracks.file_path
                 FROM tracks
+                LEFT JOIN albums
+                    ON tracks.album_id = albums.id
             """)
 
             tracks: list[TrackDict] = []
@@ -337,12 +357,14 @@ class Database:
                 td: TrackDict = {
                     'id': row[0],
                     'name': row[1],
-                    'artists': row[2],
-                    # TODO: Corregir esto eventualmente
-                    'album_id': row[3],
+                    # artists is a comma-separated TEXT column; callers expect a
+                    # list. Returning the raw string made ', '.join() spell out
+                    # every character in download_all_tracks.
+                    'artists': [artist.strip() for artist in (row[2] or "").split(",")],
                     'album': row[3],
-                    'downloaded': row[4],
-                    'file_path': row[5]
+                    'album_id': row[4],
+                    'downloaded': bool(row[5]),
+                    'file_path': row[6]
                 }
                 tracks.append(td)
             
@@ -397,6 +419,31 @@ class Database:
             stats['albums_with_covers'] = cursor.fetchone()[0]
 
         return stats
+
+    def get_playlist_download_counts(self) -> dict[str, dict[str, int]]:
+        """Per-playlist download progress.
+
+        Returns ``{playlist_id: {"tracks": n, "downloaded": m}}``. Counting
+        through the join keeps playlists whose tracks have no rows out of the
+        result instead of reporting a phantom count.
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    playlist_tracks.playlist_id,
+                    COUNT(*) AS tracks,
+                    SUM(CASE WHEN tracks.downloaded = 1 THEN 1 ELSE 0 END) AS downloaded
+                FROM playlist_tracks
+                JOIN tracks ON tracks.id = playlist_tracks.track_id
+                GROUP BY playlist_tracks.playlist_id
+                """
+            ).fetchall()
+
+        return {
+            str(playlist_id): {"tracks": int(tracks), "downloaded": int(downloaded or 0)}
+            for playlist_id, tracks, downloaded in rows
+        }
 
     # Revisar esta funcion!
     # quizas conviene construir otro TypeDict
@@ -502,7 +549,7 @@ class Database:
             )
             positions = [row[0] for row in cursor.fetchall()]
         
-        expected = list(range(1, len(positions) + 1))
+        expected = list(range(len(positions)))
         return positions == expected
 
     def mark_playlist_as_synced(

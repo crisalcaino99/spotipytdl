@@ -5,20 +5,43 @@ from typing import Any, Callable, Mapping
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
+import logging
 import re
 
 import yt_dlp
 
 ProgressCallback = Callable[[float, str], None]
 
+logger = logging.getLogger(__name__)
+
+
+def default_ffmpeg_location() -> str | None:
+    """Path to a usable ffmpeg binary, or None to let yt-dlp search PATH.
+
+    ``imageio-ffmpeg`` ships a static build, which avoids depending on a system
+    package that may be absent and not installable without root.
+    """
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe
+
+        return get_ffmpeg_exe()
+    except Exception:  # noqa: BLE001 - any failure just means "not available"
+        return None
+
+
 def sanitize_filename(name: str) -> str:
-    return re.sub(r'[<>:"/\\|?*]', '', name)
+    return re.sub(r'[<>":/\\|?*]', '', name)
 
 
 class Downloader:
-    def __init__(self, download_dir: Path, ffmpeg_location: str | None) -> None:
+    def __init__(
+            self,
+            download_dir: Path,
+            ffmpeg_location: str | None = None,
+    ) -> None:
         self.download_dir = download_dir
-        self.ffmpeg_location = ffmpeg_location
+        self.download_dir.mkdir(parents=True, exist_ok=True)
+        self.ffmpeg_location = ffmpeg_location or default_ffmpeg_location()
     
     def search_and_download(
             self,
@@ -93,7 +116,9 @@ class Downloader:
                     downloaded_mp3 = Path(prepared).with_suffix(".mp3")
 
         except Exception as e:
-            print(f"Error {e}")
+            logger.warning(
+                "yt-dlp failed for %r by %r: %s", track_name, artist, e
+            )
             return None
         
         if downloaded_mp3 is not None and downloaded_mp3.exists(): # type: ignore

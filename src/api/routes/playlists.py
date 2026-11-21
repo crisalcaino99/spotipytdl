@@ -12,8 +12,16 @@ router = APIRouter(prefix="/api/playlists", tags=["playlists"])
 
 @router.get("")
 def list_playlists() -> dict[str, Any]:
-    """Summaries of every playlist stored locally."""
-    return {"items": get_db().get_all_playlists_summary()}
+    """Summaries of every playlist, with per-playlist download progress."""
+    db = get_db()
+    counts = db.get_playlist_download_counts()
+
+    items = []
+    for playlist in db.get_all_playlists_summary():
+        progress = counts.get(str(playlist["id"]), {"tracks": 0, "downloaded": 0})
+        items.append({**playlist, **progress})
+
+    return {"items": items}
 
 
 @router.get("/{playlist_id}")
