@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -9,6 +9,7 @@ import re
 
 import yt_dlp
 
+ProgressCallback = Callable[[float, str], None]
 
 def sanitize_filename(name: str) -> str:
     return re.sub(r'[<>:"/\\|?*]', '', name)
@@ -19,15 +20,32 @@ class Downloader:
         self.download_dir = download_dir
         self.ffmpeg_location = ffmpeg_location
     
-    def search_and_download(self, track_name: str, artist: str) -> str | None :
-        """Allegedly searches and puts a sanitized name. Returns the str of the path.mp3
+    def search_and_download(
+            self,
+            track_name: str,
+            artist: str,
+            on_progress: ProgressCallback | None = None,
+    ) -> str | None:
+        """Search for a track and download it as mp3.
+
+        ``on_progress(fraction, stage)`` is invoked from the yt-dlp worker thread
+        while the file is being fetched, so callers can surface a progress bar.
         """
         downloaded_mp3: Path | None = None
 
         def progress_hook(d: dict[str, Any]) -> None:
             nonlocal downloaded_mp3
 
-            if d.get("status") != "finished":
+            status = d.get("status")
+
+            if status == "downloading" and on_progress is not None:
+                total = d.get("total_bytes") or d.get("total_bytes_estimate")
+                done = d.get("downloaded_bytes")
+                if total and done:
+                    on_progress(done / total, "downloading")
+                return
+
+            if status != "finished":
                 return
             
             filename = d.get("filename")
@@ -35,6 +53,9 @@ class Downloader:
                 return
             
             downloaded_mp3 = Path(filename).with_suffix(".mp3")
+
+            if on_progress is not None:
+                on_progress(1.0, "converting")
         
         search_query = f"{artist} {track_name}"
         safe_name = sanitize_filename(f"{artist} {track_name}") # ignore
